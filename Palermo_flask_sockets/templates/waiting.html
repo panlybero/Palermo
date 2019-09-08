@@ -1,0 +1,29 @@
+{% extends "layout.html" %}
+
+{% block time %} 
+
+{% endblock %}   
+
+
+
+
+
+{% block content %}
+<center><img id = "time_pic" alt="logo" /></center>
+<script type = "text/javascript">
+    $(document).ready(function(){
+        
+
+        
+        var socket = io.connect()
+        socket.on("connect", function(){
+            socket.emit("waiting","in waiting");
+
+        });
+
+    
+
+    });
+</script> 
+
+{% endblock content %}

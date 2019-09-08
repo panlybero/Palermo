@@ -1,0 +1,205 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+<!--
+Main page. Displays lobby, public events and an iframe for voting.
+
+
+-->
+
+
+<center>    
+<img id = "img" height = "50%" width = "50%" >
+<h1 id = "trans_text"></h1>
+</center>
+<div id = "game_container">
+<div class = "container">
+    <font color = "black">
+    <center><h1>Lobby</h1></center>
+    <table class="table table" id = "table">
+        <tbody>
+       
+        </tbody>
+    </table>  
+</font>
+</div>
+<div id = "kill_save_buttons">
+<center><button id="ready">Ready</button>    <button id = "getRole">Get Role</button></center>
+<center><button id="kill">Kill</button>    <button id = "save">Save</button></center>
+</div>
+
+
+<div class = "container" id = "pub_ev_container">
+    <font color = "black">
+    <center><h1>Voting</h1></center>
+    <table  id = "votes_table">
+            <tbody>
+                
+            </tbody>
+    </table>  
+
+
+    <center><h1>Public Events</h1></center>
+    <table class="table table" id = "pubevents">
+        <tbody>
+       
+        </tbody>
+    </table>  
+    
+
+</font>
+    
+
+</div>
+
+<div class "content-section" id = "char_page_container">
+
+    <center><iframe id = "char_page" style="position: relative; width:50%; height: 150%; border: none"></iframe> </center>
+</div>
+</div>
+<script type = "text/javascript">
+
+    name = '{{name}}';
+    console.log(name)
+    role = ""
+    is_day = true
+    $(document).ready(function(){
+        
+        var socket = io.connect()
+        var id = Math.random();
+        ///////////////////////////////////////////
+        /*
+            Initialize hidden elements
+
+        */
+        $("#getRole").hide();
+        $("#pub_ev_container").hide();
+        $("#char_page_container").hide();
+        $("#kill").hide();
+        $("#save").hide();
+        
+        ///////////////////////////////////////////
+        /*
+
+            Listen for Events
+        */
+        
+        socket.on("connect", function(){ // listen for connect
+            socket.emit("connected_lobby",name); //signal in loby
+            
+        });
+        
+        socket.on("day",function(){
+            $("img").attr("src","./static/day_crop.gif")
+            $("#game_container").show()
+            $("#trans_text").hide()
+            is_day = true
+        });
+        
+        socket.on("night",function(){
+            $("img").attr("src","./static/night_cropped.gif")
+            $("#game_container").show()
+            $("#trans_text").hide()
+            is_day = false
+        });
+
+        socket.on("all_ready", function(){ // listen for all ready
+            $("#ready").hide();
+            $("#getRole").show();
+            
+        });
+        
+        socket.on("rec_role",function(message){ // listen for role. Triggered when all ready. 
+            role = message
+            
+            if(message.substring(0,4).localeCompare("insp") == 0) //multiple inspectors
+            {
+                role = message.substring(0,9)
+            }
+            
+            $("#pub_ev_container").show();
+            $("#getRole").hide();
+            $("#char_page").attr("src","/"+name+"/"+role)
+            $("#char_page_container").show();
+        });
+        
+        socket.on("pub_event", function(message){ // Adds message to public events. 
+            $("#pubevents").prepend("<center><p>"+message+"</p></center>")
+        });
+
+        socket.on("getName",function(message){ // listen for name
+            name = message
+        });
+        
+        socket.on("votes_update",function(votes){ //Updates votes table
+            $("#votes_table tr").remove();
+            for(i in votes){
+                var row =  "<tr style = 'font-family:courier; font-size:120%'><td>"+i+": "+votes[i]+"</td></tr>"
+                $("#votes_table").append(row)
+                
+            }
+            
+        });
+        socket.on("lobby_update",function(players){ //Updates lobby table
+            $("#table tr").remove();
+            for(i in players){
+                var row = ""
+                if(players[i] == 0){
+                    row = "<tr bgcolor = '#FFCDD2' style = 'font-family:courier; font-size:120%'><td>"+i+"</td></tr>"
+                }
+                if(players[i] == 1){
+                    row = "<tr bgcolor = '#D0F0C0' style = 'font-family:courier; font-size:120%'><td>"+i+"</td></tr>"
+                }
+                if(players[i] == 2){
+                    row = "<tr bgcolor = '#FEC34D' style = 'font-family:courier; font-size:120%'><td>"+i+"</td></tr>"
+                }
+                if(players[i] == 3){
+                    row = "<tr bgcolor = '#FFCDD2' style = 'font-family:courier; font-size:120%'><td>"+i+"</td></tr>"
+                }
+                $("#table").append(row)
+            }
+            
+        });
+
+        socket.on("sunset",function(){
+            $("#game_container").hide();
+            $("#img").attr("src","./static/sunset_noloop.gif")
+            $("#trans_text").text("Night is falling in Palermo...")
+            $("#trans_text").show()
+            setTimeout(function() {
+                socket.emit("nightfall",name)
+            }, 10000);
+            
+        });
+        socket.on("sunrise",function(){
+            $("#game_container").hide();
+            $("#img").attr("src","./static/sunrise_noloop.gif")
+            $("#trans_text").text("The sun rises in Palermo...")
+            $("#trans_text").show()
+            setTimeout(function() {
+                socket.emit("dawn",name)
+            }, 10000);
+            
+        });
+
+
+        ///////////////////////////////////////////
+        /*
+            Trigger events
+        */
+        $("#ready").on("click", function(){ //signal ready
+            socket.emit("ready",name)
+        });
+        
+        $("#getRole").on("click", function(){ //signal get role
+            socket.emit("getrole",name)
+            $("#getRole").hide();
+        });
+
+
+    });
+</script>    
+    
+
+{% endblock content %}

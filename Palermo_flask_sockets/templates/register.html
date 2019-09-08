@@ -1,0 +1,71 @@
+{% extends "layout.html" %}
+
+{% block content %}
+    
+    <script type = "text/javascript">
+    // jquery extend function
+    
+        
+        
+
+        name = "";
+         $(document).ready(function(){
+            $.fn.extend(
+            {
+            redirectPost: function(location, args)
+            {
+                var form = $('<form></form>');
+                form.attr("method", "post");
+                form.attr("action", location);
+
+                $.each( args, function( key, value ) {
+                    var field = $('<input></input>');
+                    console.log(value)
+                    field.attr("type", "hidden");
+                    field.attr("name", key);
+                    field.attr("value", value);
+
+                    form.append(field);
+                });
+                $(form).appendTo('body').submit();
+            }
+        });
+
+            var socket = io.connect()
+            socket.on("connect", function(){
+                socket.send('User has connected!');
+            });
+
+            socket.on("message", function(msg){
+                
+                        console.log("recieved message")
+                    });
+                    
+            $("#register").on('click',function(){
+                if($('#input').val()!="")
+                {
+                    socket.emit("register",$('#input').val());
+                    name = $('#input').val()
+                    $('#input').val('')
+                }
+                
+                
+            })
+
+            socket.on('redirect', function (data) {
+                //window.location = data.url;
+                var redirect = data.url;
+                $("#input").redirectPost(redirect, {username:name});
+            });
+              
+            
+         
+        });
+
+    </script>
+   <div class = "content-section">
+        <input type = "text" id = "input">
+        <button id = "register">Register</button>
+   </div>
+
+{% endblock content %}

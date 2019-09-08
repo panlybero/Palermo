@@ -1,0 +1,221 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+
+
+    <script type = "text/javascript">
+
+         $(document).ready(function(){
+            
+            name = ""
+
+            var socket = io.connect()
+           
+            ///////////////////////////////////////////
+            /*
+                Initialize hidden elements
+
+            */
+            $("#kill_save").hide();
+            $("#ability").hide()
+            $("#dead_message").hide();
+            $("#sleep_control").hide();
+            $("#speak").hide();
+            is_night = false;
+            is_dead = false;
+            has_converted = false;
+            ///////////////////////////////////////////
+            /*
+                Listen for Events
+            */
+
+            socket.on("connect", function(){ // listen for connect
+                 // signal your socket to server
+                var tmp = window.location.pathname
+                var strt = 1
+                var end = 1
+            
+                var i;
+                for (i = 1; i < tmp.length; i++) {
+                    if(tmp.charAt(i) == "/")
+                    {
+                        end = i;
+                        break;
+                    }
+                }
+                name = tmp.substring(strt,end)
+                socket.emit("send_socket",name);
+            });
+            socket.on("priv_event",function(msg){
+                $("#privevents").prepend("<center><p>"+msg+"</p></center>")
+
+            });
+
+            socket.on("message", function(msg){
+                
+                console.log("recieved message")
+            });
+            
+            socket.on("vote_kill_save",function(name){  //change voting to kill-save
+                    
+                $("#actions").hide();        
+                $("#kill_save").show();
+                $("#kill_save_message").text(name+"'s fate is in your hands");
+
+            });
+            socket.on("vote_end",function(msg){  //kill-save ended, restore interface
+            
+                $("#actions").show();        
+                $("#kill_save").hide();
+                $("#sleep_control").text("Sleep");
+                $("#sleep_control").show();
+                
+    
+            });
+            
+            socket.on("has_died",function(){
+
+                $("#dead_message").show()
+                $("#vote").hide()
+                $("#ability").hide()
+                $("#speak").show()
+                $("#sleep_control").hide()
+                $("#priv_events_container").hide()
+                is_dead = true;
+
+            });
+            socket.on("day",function(){
+
+                $("#sleep_control").hide();
+                if(!is_dead){
+                    $("#vote").show()
+                    $("#ability").hide()
+                }
+               
+                is_night = false
+
+
+            });
+            socket.on("night",function(){
+                
+                $("#sleep_control").text("Wake up");
+                
+                $("#vote").hide()
+                $("#ability").show()
+                if(!is_dead)
+                {
+                    $("#sleep_control").show();
+                }
+                is_night = true
+
+            });
+            socket.on("ressurected",function(){
+                has_died = false;
+                $("#vote").show()
+                $("#dead_message").hide()
+                $("#speak").hide()
+
+            });
+            socket.on("has_converted",function(){
+                has_converted = true;
+                $("#ability").prop('disabled',true)
+
+            });
+            ///////////////////////////////////////////
+            /*
+                Trigger events
+            */
+
+            $("#vote").on("click",function(){ //on click vote, send input to server
+                socket.emit("vote", name+"$"+$("#input").val())
+            });
+                    
+           
+            $("#kill").on("click", function(){ //on kill
+                socket.emit("vote",name+"$"+"Kill")
+            });
+            
+            $("#save").on("click", function(){ //on save
+                socket.emit("vote",name+"$"+"Save")
+            });
+
+            $("#sleep_control").on("click",function(){
+                socket.send("sleep_pressed")
+
+                
+                if(is_night == false)
+                {
+                    socket.emit("sleep_control","sleep")
+                    //signal GOING TO SLEEP
+                }
+                else
+                {
+                    socket.emit("sleep_control","wakeup")
+                    //signal WAKE UP
+                }
+
+            });
+                
+
+            $("#ability").on("click", function(){ //on save
+                var target = $("#input").val()
+                if(target != "")
+                {
+                    socket.emit("mafia_convert",target) 
+                    $("#ability").hide()
+                }
+                
+            });
+
+            $("#speak").on("click",function(){ //on speak
+                var m =  $("#input").val();
+                if(is_dead)
+                {
+                    socket.emit("speak",{to:"medium",mess:m})
+                }
+                else
+                {
+
+                }
+            });
+
+
+        });
+
+    </script>
+
+
+<div class = "content-section" id = "actions">
+<center>
+    <h1>Mafia</h1>
+    <h1 id = "dead_message">You are dead motherfucker</h1>
+    <input type = "text" id = "input">
+    <button id = "vote">Vote</button>
+    <button id = "ability">Convert</button>
+    <button id = "speak">Speak</button>
+    <button id = "sleep_control"></button>
+</center>
+</div>
+
+<div class = "content-section" id = "kill_save">
+    <center>
+        <h1 id = "kill_save_message"></h1>
+        
+        <button id = "kill">Kill</button>
+        <button id = "save">Save</button>
+    </center>
+</div>
+<div id = "priv_events_container">
+
+    <center><h1>Private Events</h1></center>
+    <table class="table table" id = "privevents">
+        <tbody>
+       
+        </tbody>
+    </table> 
+
+</div>
+
+
+{% endblock content %}
